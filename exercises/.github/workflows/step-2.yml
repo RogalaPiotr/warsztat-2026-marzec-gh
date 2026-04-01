@@ -1,0 +1,70 @@
+name: step-2
+
+on:
+  push:
+    paths:
+      - 'step-2/**'
+      - '.github/workflows/step-2.yml'
+  workflow_dispatch:
+
+jobs:
+  terraform_deploy:
+    name: Terraform Deploy - Step 2
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Install Terraform (if missing)
+        shell: pwsh
+        run: |
+          if (-not (Get-Command terraform -ErrorAction SilentlyContinue)) {
+            Write-Host "Terraform not found. Installing..."
+            $version = "1.10.5"
+            $url = "https://releases.hashicorp.com/terraform/${version}/terraform_${version}_linux_amd64.zip"
+            Invoke-WebRequest -Uri $url -OutFile /tmp/terraform.zip
+            Expand-Archive -Path /tmp/terraform.zip -DestinationPath /tmp/terraform-bin
+            sudo mv /tmp/terraform-bin/terraform /usr/local/bin/terraform
+            Write-Host "Terraform installed: $(terraform version)"
+          } else {
+            Write-Host "Terraform already available: $(terraform version)"
+          }
+
+      - name: Terraform Init
+        shell: pwsh
+        working-directory: step-2
+        env:
+          ARM_USE_AZUREAD: true
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+        run: terraform init
+
+      - name: Terraform Plan
+        shell: pwsh
+        working-directory: step-2
+        env:
+          ARM_USE_AZUREAD: true
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+        run: |
+          terraform plan -out="${{ runner.temp }}/plan.out"
+
+      - name: Terraform Apply
+        shell: pwsh
+        working-directory: step-2
+        env:
+          ARM_USE_AZUREAD: true
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+        run: terraform apply -auto-approve "${{ runner.temp }}/plan.out"

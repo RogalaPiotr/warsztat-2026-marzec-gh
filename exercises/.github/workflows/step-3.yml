@@ -1,0 +1,27 @@
+
+name: step-3
+
+on:
+  push:
+    paths:
+      - 'step-3/**'
+      - '.github/workflows/step-3.yml'
+  workflow_dispatch:
+
+jobs:
+
+  ## Job: Terraform Plan
+  plan:
+    uses: ./.github/workflows/step-3-plan.yml
+    with:
+      workingDirectory: step-3
+    secrets: inherit
+
+  ## Job: Terraform Apply
+  apply:
+    needs: [plan]
+    #if: github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/step-3-apply.yml
+    with:
+      workingDirectory: step-3
+    secrets: inherit

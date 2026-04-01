@@ -1,0 +1,26 @@
+name: step-1
+
+on:
+  push:
+    paths:
+      - '.github/workflows/deployment-1.yml'
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Hello World
+        shell: pwsh
+        run: Write-Host "Hello World"
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: List Resource Groups
+        run: az group list --output table
